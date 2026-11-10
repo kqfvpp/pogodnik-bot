@@ -4,12 +4,13 @@ import http.server
 import os
 import socketserver
 import threading
+import time
 import requests
 import telebot
 from telebot import types
 from config import open_weather_api_key
 
-# --- ВЕБ-СЕРВЕР ДЛЯ РАБОТЫ НА RENDER (чтобы порт был открыт) ---
+# --- ВЕБ-СЕРВЕР ДЛЯ РАБОТЫ НА RENDER ---
 PORT = int(os.environ.get("PORT", 10000))
 
 
@@ -41,11 +42,10 @@ bot = telebot.TeleBot("8247005293:AAE-T3d4J_7Thi1avj9PQt_HxXGyqM6mBb8")
 
 # Хранение состояний по чатам
 active_chats = set()
-user_languages = {}  # Выбранный язык чата ('uz' или 'ru')
-user_cities = {}  # Последний город чата
-weather_state = {}  # Прошлая погода для отслеживания резких скачков
+user_languages = {}
+user_cities = {}
+weather_state = {}
 
-# Перевод погодных явлений
 WEATHER_NAMES = {
     "uz": {
         "Clear": "Quyoshli ☀️",
@@ -73,7 +73,6 @@ WEATHER_NAMES = {
     },
 }
 
-# Все тексты интерфейса на двух языках
 TEXTS = {
     "uz": {
         "welcome": (
@@ -213,7 +212,6 @@ def get_lang(chat_id):
 def get_clothing_advice(temp, weather_desc, lang):
   t = TEXTS[lang]
   advice = []
-
   if temp < 5:
     advice.append(t["adv_cold"])
   elif temp < 12:
@@ -231,7 +229,6 @@ def get_clothing_advice(temp, weather_desc, lang):
     advice.append(t["adv_snow"])
   elif "Clear" in weather_desc and temp >= 24:
     advice.append(t["adv_sun"])
-
   return " ".join(advice)
 
 
@@ -240,7 +237,6 @@ def send_language_menu(chat_id):
   btn_uz = types.InlineKeyboardButton("🇺🇿 O'zbekcha", callback_data="lang:uz")
   btn_ru = types.InlineKeyboardButton("🇷🇺 Русский", callback_data="lang:ru")
   keyboard.add(btn_uz, btn_ru)
-
   bot.send_message(
       chat_id, "🇺🇿 Tilni tanlang:\n🇷🇺 Выберите язык:", reply_markup=keyboard
   )
@@ -271,17 +267,13 @@ def ask_weather_type(message):
   chat_id = message.chat.id
   if chat_id not in active_chats:
     return
-
   lang = get_lang(chat_id)
   t = TEXTS[lang]
   city = message.text.strip()
-
   if len(city.encode("utf-8")) > 55:
     bot.send_message(chat_id, t["city_too_long"])
     return
-
   user_cities[chat_id] = city
-
   keyboard = types.InlineKeyboardMarkup()
   btn_today = types.InlineKeyboardButton(
       t["btn_today"], callback_data=f"today:{city}"
@@ -290,7 +282,6 @@ def ask_weather_type(message):
       t["btn_week"], callback_data=f"week:{city}"
   )
   keyboard.add(btn_today, btn_week)
-
   bot.send_message(
       chat_id,
       t["choose_type"].format(city=escape(city)),
@@ -302,15 +293,12 @@ def ask_weather_type(message):
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
   chat_id = call.message.chat.id
-
   try:
     action, value = call.data.split(":", 1)
-
     if action == "lang":
       lang = value if value in TEXTS else "ru"
       user_languages[chat_id] = lang
       active_chats.add(chat_id)
-
       bot.answer_callback_query(call.id)
       bot.edit_message_text(
           TEXTS[lang]["welcome"],
@@ -332,18 +320,15 @@ def callback_inline(call):
       data = r.json()
       if data.get("cod") != 200:
         raise ValueError("City not found")
-
       city_name = escape(data["name"])
       cur_weather = round(data["main"]["temp"], 1)
       weather_desc = data["weather"][0]["main"]
       wd = WEATHER_NAMES[lang].get(weather_desc, t["unknown_weather"])
-
       feels_like = round(data["main"]["feels_like"], 1)
       humidity = data["main"]["humidity"]
       pressure = round(data["main"]["pressure"] * 0.75006)
       wind = data["wind"]["speed"]
       advice = get_clothing_advice(cur_weather, weather_desc, lang)
-
       answer = t["today_msg"].format(
           city=city_name,
           temp=cur_weather,
@@ -361,7 +346,6 @@ def callback_inline(call):
           message_id=call.message.message_id,
           parse_mode="HTML",
       )
-
     elif action == "week":
       r = requests.get(
           f"http://api.openweathermap.org/data/2.5/forecast?q={city}&appid={open_weather_api_key}&units=metric",
@@ -370,10 +354,8 @@ def callback_inline(call):
       data = r.json()
       if str(data.get("cod")) != "200":
         raise ValueError("City not found")
-
       city_name = escape(data["city"]["name"])
       forecast_lines = [t["week_header"].format(city=city_name)]
-
       for item in data["list"]:
         if "12:00:00" in item["dt_txt"]:
           date = item["dt_txt"].split(" ")[0]
@@ -381,7 +363,6 @@ def callback_inline(call):
           weather_desc = item["weather"][0]["main"]
           wd = WEATHER_NAMES[lang].get(weather_desc, "🤔")
           forecast_lines.append(f"📅 <b>{date}</b>: <b>{temp}℃</b> {wd}")
-
       answer = "\n".join(forecast_lines) + t["week_footer"]
       bot.answer_callback_query(call.id)
       bot.edit_message_text(
@@ -390,7 +371,6 @@ def callback_inline(call):
           message_id=call.message.message_id,
           parse_mode="HTML",
       )
-
   except Exception:
     lang = get_lang(chat_id)
     bot.answer_callback_query(call.id, TEXTS[lang]["not_found_alert"])
@@ -401,7 +381,6 @@ def callback_inline(call):
     )
 
 
-# Утренний планировщик
 def morning_scheduler():
   while True:
     try:
@@ -411,7 +390,6 @@ def morning_scheduler():
           city = user_cities.get(chat_id, "Namangan")
           lang = get_lang(chat_id)
           t = TEXTS[lang]
-
           r = requests.get(
               f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={open_weather_api_key}&units=metric",
               timeout=10,
@@ -419,12 +397,10 @@ def morning_scheduler():
           data = r.json()
           if data.get("cod") != 200:
             continue
-
           temp = round(data["main"]["temp"], 1)
           desc = data["weather"][0]["main"]
           wd = WEATHER_NAMES[lang].get(desc, "")
           advice = get_clothing_advice(temp, desc, lang)
-
           morning_text = t["morning_msg"].format(
               city=escape(data["name"]), temp=temp, weather=wd, advice=advice
           )
@@ -435,7 +411,6 @@ def morning_scheduler():
     time.sleep(30)
 
 
-# Мониторинг резких изменений каждые 5 минут
 def weather_monitor():
   while True:
     try:
@@ -443,7 +418,6 @@ def weather_monitor():
         city = user_cities.get(chat_id, "Namangan")
         lang = get_lang(chat_id)
         t = TEXTS[lang]
-
         r = requests.get(
             f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={open_weather_api_key}&units=metric",
             timeout=10,
@@ -451,14 +425,11 @@ def weather_monitor():
         data = r.json()
         if data.get("cod") != 200:
           continue
-
         current_temp = round(data["main"]["temp"], 1)
         current_desc = data["weather"][0]["main"]
-
         last_data = weather_state.get(
             chat_id, {"temp": current_temp, "desc": current_desc}
         )
-
         is_raining_now = (
             "Rain" in current_desc or "Thunderstorm" in current_desc
         )
@@ -477,19 +448,15 @@ def weather_monitor():
             alert_text += t["alert_cold"].format(
                 diff=int(last_data["temp"] - current_temp)
             )
-
           bot.send_message(chat_id, alert_text, parse_mode="HTML")
-
         weather_state[chat_id] = {"temp": current_temp, "desc": current_desc}
     except Exception as e:
       print(f"Ошибка в мониторинге погоды: {e}")
-
     time.sleep(300)
 
 
 if __name__ == "__main__":
   threading.Thread(target=morning_scheduler, daemon=True).start()
   threading.Thread(target=weather_monitor, daemon=True).start()
-
   print("Бот успешно запущен на Render со встроенным веб-сервером!")
-  bot.infinity_polling()
+  bot.infinity_polling(skip_pending=True)
