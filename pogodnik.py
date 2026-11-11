@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from html import escape
 import http.server
 import os
@@ -384,7 +384,8 @@ def callback_inline(call):
 def morning_scheduler():
   while True:
     try:
-      now = datetime.now()
+      # Установлено время Узбекистана (UTC+5)
+      now = datetime.now(timezone(timedelta(hours=5)))
       if now.hour == 8 and now.minute == 0:
         for chat_id in list(active_chats):
           city = user_cities.get(chat_id, "Namangan")
