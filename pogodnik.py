@@ -460,4 +460,12 @@ if __name__ == "__main__":
   threading.Thread(target=morning_scheduler, daemon=True).start()
   threading.Thread(target=weather_monitor, daemon=True).start()
   print("Бот успешно запущен на Render со встроенным веб-сервером!")
-  bot.infinity_polling(skip_pending=True)
+
+  while True:
+    try:
+      bot.infinity_polling(
+          skip_pending=True, timeout=60, long_polling_timeout=60
+      )
+    except Exception as e:
+      print(f"Ошибка polling: {e}, повторный запуск через 5 секунд...")
+      time.sleep(5)
