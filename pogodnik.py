@@ -44,13 +44,12 @@ threading.Thread(target=run_web_server, daemon=True).start()
 # Создаем бота
 bot = telebot.TeleBot("8247005293:AAE-T3d4J_7Thi1avj9PQt_HxXGyqM6mBb8")
 
-# Хранение состояний и УМНЫЙ КЭШ (Пункт 2: защита от лишних запросов к API)
+# Хранение состояний и УМНЫЙ КЭШ
 active_chats = set()
 user_languages = {}
 user_cities = {}
 weather_state = {}
 weather_cache = {}  # Кэш: хранит данные погоды 3 минуты
-
 
 WEATHER_NAMES = {
     "uz": {
@@ -82,176 +81,126 @@ WEATHER_NAMES = {
 TEXTS = {
     "uz": {
         "welcome": (
-            "Ob-havo stansiyasi to'liq quvvatda ishlayapti! 🌤\nOb-havoni"
-            " bilish uchun istalgan shahar nomini yozing.\n\n🌅 Har kuni soat"
-            " 08:00 da ertalabki ma'lumot\n🚨 Har 5 daqiqada keskin o'zgarish"
-            " ogohlantirishi\n\nBuyruqlar:\n/lang - Tilni o'zgartirish\n/help -"
-            " Yordam"
+            "⚡ <b>ULTIMATE METEO-STATION ONLINE!</b> ⚡\nShahar nomini yozing"
+            " va barcha 15 ta maxsus funksiyadan foydalaning!\n\nBuyruqlar:\n/lang"
+            " - Tilni o'zgartirish\n/help - Yo'riqnoma"
         ),
         "help": (
-            "🤖 <b>Ob-havo Bot - Yo'riqnoma:</b>\n\n1️⃣ Shahar nomini yozing"
-            " (masalan: <i>Namangan, Tashkent, London</i>).\n2️⃣ Chiqqan"
-            " tugmalar orqali <b>Bugungi</b>, <b>Ertangi</b>, <b>Haftalik</b>"
-            " prognozni yoki <b>🔮 Bashorat</b>ni tanlang!\n3️⃣ Bot avtomat"
-            " tarzda har kuni soat 08:00 da ma'lumot yuboradi.\n\n⚙️"
-            " Buyruqlar:\n/start - Qayta ishga tushirish\n/lang - Tilni"
-            " almashtirish\n/stop - Xabarlarni to'xtatish"
+            "🤖 <b>Ultimate Bot - Qo'llanma:</b>\n\n1️⃣ Shahar nomini yozing"
+            " (masalan: <i>Namangan, Tashkent</i>).\n2️⃣ Tugmalar orqali"
+            " <b>Bugun</b>, <b>Ertaga</b>, <b>Hafta</b>, <b>🔮 Bashorat</b>,"
+            " <b>🌯 Shashlik/Shaurma</b> va boshqa epik funksiyalarni"
+            " sinang!\n\n⚙️ /start - Qayta yuklash"
         ),
-        "stopped": (
-            "Ob-havo stansiyasi vaqtincha yopildi 🌡️\nQayta yoqish uchun /start"
-            " yuboring."
-        ),
+        "stopped": "Meteostansiya to'xtatildi 🌡️\n/start yuboring.",
         "choose_type": (
-            "Tanlangan shahar: <b>{city}</b>.\nQaysi ob-havo ma'lumoti kerak?"
+            "Tanlangan shahar: <b>{city}</b>.\nQaysi rejimni tanlaysiz?"
         ),
         "btn_today": "☀️ Bugun",
         "btn_tomorrow": "🌤 Ertaga",
         "btn_week": "📅 Hafta",
         "btn_fortune": "🔮 Bashorat",
+        "btn_shaurma": "🌯 Shaurma/Kofe",
+        "btn_drip": "🧥 Drip-Check",
+        "btn_lazy": "🛋️ Lень-Index",
         "btn_back": "🔙 Orqaga",
-        "city_too_long": (
-            "❌ Shahar nomi juda uzun. Qisqaroq yozib ko'ring."
-        ),
-        "not_found": (
-            "❌ Shahar topilmadi. Nomini tekshirib, qaytadan yozing."
-        ),
-        "not_found_alert": "Xatolik! Shahar topilmadi.",
-        "unknown_weather": "Derazadan qarab ko'ring! 🤔",
+        "city_too_long": "❌ Shahar nomi juda uzun.",
+        "not_found": "❌ Shahar topilmadi.",
+        "not_found_alert": "Xatolik!",
+        "unknown_weather": "Noma'lum ob-havo 🤔",
         "today_msg": (
-            "🌍 Shahar: <b>{city}</b>\n🌡 Harorat: <b>{temp}℃</b>  {weather}\n🥶 His"
+            "🌍 Shahar: <b>{city}</b>\n🌡 Harorat: <b>{temp}℃</b> {weather}\n🥶 His"
             " qilinishi: {feels_like}℃\n💧 Namlik: {humidity}%\n📊 Bosim:"
             " {pressure} mm\n💨 Shamol: {wind} m/s\n🌅 Chiqishi: {sunrise} |"
-            " Botishi: {sunset}\n\n💡 <b>Maslahat:</b>"
-            " {advice}\n\nKuningiz xayrli o'tsin! 😉"
+            " Botishi: {sunset}\n\n{radar}\n\n💡 <b>Maslahat:</b>"
+            " {advice}\n\n{cyber}\nKuningiz xayrli o'tsin! 😉"
         ),
-        "fortune_msg": "🔮 <b>{city} uchun kunlik meteorлогик bashorat:</b>\n\n💬 <i>\"{fortune}\"</i>\n\nKuningiz sarguzashtlarga boy bo'lsin! ✨",
-        "fortunes": [
-            "Bugungi ob-havo shuni ko'rsatmoqdaki, eng zo'r qaror — uyda iliq choy ichib o'tirish.",
-            "Quyosh chiqadi, lekin ishingizda shartnoma imzolashdan oldin ikki marta o'ylab ko'ring!",
-            "Havo sovuq, lekin yuragingizdagi otash barcha muzlarni eritadi.",
-            "Kutilmagan yomg'ir yo'lingizni o'zgartirishi mumkin, bu esa yangi omadga olib keladi!",
-            "Bugun tabiat sizga dam olishni buyurmoqda. Stressni unuting!",
-        ],
+        "shaurma_msg": (
+            "🌯 <b>Shahar: {city} | Shaurma & Kofe indeksi</b>\n\n🔥 Ob-havo"
+            " sharoiti tufayli shaurma yeb, issiq kofe ichish ehtimoli:"
+            " <b>{chance}%</b>!\n💬 <i>\"{text}\"</i>"
+        ),
+        "drip_msg": (
+            "🧥 <b>Drip-Check (Uslub va Kiyinish):</b>\n\n⭐ Baho: <b>{score}</b>"
+            " / 10\n💬 <i>\"{comment}\"</i>"
+        ),
+        "lazy_msg": (
+            "🛋️ <b>Pablik-Lень Index:</b>\n\n💤 Bugun hech narsa qilmasdan"
+            " o'ynash/uxlash ehtimoli: <b>{lazy}%</b>!\n💬 <i>\"{phrase}\"</i>"
+        ),
+        "fortune_msg": "🔮 <b>Meteo-folbinlik ({city}):</b>\n\n💬 <i>\"{fortune}\"</i>",
         "tomorrow_header": "🌍 <b>{city}</b> uchun ertangi prognoz:\n\n",
         "week_header": "🌍 <b>{city}</b> uchun hafta prognozi:\n\n",
         "week_footer": "\nKuningiz xayrli o'tsin! 😉",
         "morning_msg": (
-            "🌅 <b>Xayrli tong! {city} shahri uchun kunlik"
-            " ma'lumot:</b>\n🌡 Harorat: {temp}℃  {weather}\n💡 {advice}\n\nYaxshi"
-            " kun tilayman!"
+            "🌅 <b>Xayrli tong! {city}:</b>\n🌡 Harorat: {temp}℃ {weather}\n💡"
+            " {advice}\n\nKuningiz omadli kelsin!"
         ),
-        "alert_header": (
-            "🚨 <b>Ob-havo keskin o'zgardi ({city})!</b>\n🌡 Hozir: {temp}℃\n"
-        ),
-        "alert_rain": (
-            "☔ <b>Yomg'ir boshlandi! Soyabon olishni unutmang!</b>\n"
-        ),
-        "alert_cold": (
-            "🥶 <b>Harorat birdan {diff}℃ ga tushib ketdi! Issiqroq"
-            " kiyining.</b>"
-        ),
-        "adv_cold": (
-            "🧥 Qalin kurtka, shapka va sharf kiying — ko'chada haqiqiy sovuq!"
-        ),
-        "adv_chilly": (
-            "🧥 Issiqroq kurtka yoki palto kiying, oddiy koftada sovqotasiz."
-        ),
-        "adv_cool": (
-            "🧥 Vetrovka yoki qalin tolstovka/sviter kiying, futbolka yetmaydi."
-        ),
-        "adv_mild": (
-            "👕 Yengil kofta yoki ko'ylak yetarli, lekin kechga tomon"
-            " salqinlashishi mumkin."
-        ),
-        "adv_warm": "👕 Futbolka yetarli, ko'chada bemalol issiq.",
-        "adv_rain": "☔ Albatta soyabon oling!",
-        "adv_snow": "🥾 Qor yog'yapti, sirpanmaydigan issiq poyabzal kiying.",
-        "adv_sun": "🕶️ Quyoshli havo, quyoshdan saqlaydigan ko'zoynak oling.",
+        "alert_header": "🚨 <b>Keskin o'zgarish ({city})!</b>\n🌡 Hozir: {temp}℃\n",
+        "alert_rain": "☔ <b>Yomg'ir boshlandi! Soyabon oling!</b>\n",
+        "alert_cold": "🥶 <b>Harorat {diff}℃ ga tushdi! Qalin kiyining.</b>",
     },
     "ru": {
         "welcome": (
-            "Метеостанция работает на максимуме! 🌤\nНапишите название города,"
-            " чтобы узнать погоду.\n\n🌅 Ежедневная утренняя сводка в 08:00\n🚨"
-            " Автоматические штормовые предупреждения\n\nКоманды:\n/lang -"
-            " Сменить язык\n/help - Помощь"
+            "⚡ <b>ULTIMATE METEO-STATION ONLINE!</b> ⚡\nОтправьте название"
+            " города и активируйте все 15 убойных фич!\n\nКоманды:\n/lang -"
+            " Сменить язык\n/help - Инструкция"
         ),
         "help": (
-            "🤖 <b>Погодный Бот - Справка:</b>\n\n1️⃣ Отправьте название любого"
-            " города (например: <i>Namangan, Ташкент, Москва</i>).\n2️⃣ Используйте"
-            " кнопки для просмотра погоды на <b>Сегодня</b>, <b>Завтра</b>,"
-            " <b>Неделю</b> или нажмите <b>🔮 Предсказание</b>.\n3️⃣ Бот"
-            " автоматически пришлет прогноз каждое утро в 08:00.\n\n⚙️"
-            " Команды:\n/start - Перезапуск\n/lang - Сменить язык\n/stop -"
-            " Отключить уведомления"
+            "🤖 <b>Ultimate Бот - Справка:</b>\n\n1️⃣ Напишите город (например,"
+            " <i>Namangan, Ташкент</i>).\n2️⃣ Используйте кнопки:"
+            " <b>Сегодня</b>, <b>Завтра</b>, <b>Неделя</b>, <b>🔮 Прогноз</b>,"
+            " <b>🌯 Шаурма-тест</b>, <b>🧥 Drip-Check</b> и <b>🛋️ Индекс"
+            " лени</b>!\n\n⚙️ /start - Перезапуск"
         ),
-        "stopped": (
-            "Метеостанция закрыта на техобслуживание 🌡️\nОтправь /start, чтобы"
-            " включить."
-        ),
+        "stopped": "Метеостанция отключена 🌡️\nОтправь /start.",
         "choose_type": (
-            "Выбран город: <b>{city}</b>.\nКакой прогноз тебя интересует?"
+            "Выбран город: <b>{city}</b>.\nКакой режим активируем?"
         ),
         "btn_today": "☀️ Сегодня",
         "btn_tomorrow": "🌤 Завтра",
         "btn_week": "📅 Неделя",
         "btn_fortune": "🔮 Предсказание",
+        "btn_shaurma": "🌯 Шаурма/Кофе",
+        "btn_drip": "🧥 Drip-Check",
+        "btn_lazy": "🛋️ Индекс лени",
         "btn_back": "🔙 Назад",
-        "city_too_long": (
-            "❌ Слишком длинное название города. Попробуй короче."
-        ),
-        "not_found": (
-            "❌ Город не найден. Проверь название и отправь заново."
-        ),
-        "not_found_alert": "Ошибка! Город не найден.",
-        "unknown_weather": "Посмотри в окно! 🤔",
+        "city_too_long": "❌ Слишком длинное название.",
+        "not_found": "❌ Город не найден.",
+        "not_found_alert": "Ошибка!",
+        "unknown_weather": "Непонятно что за окном 🤔",
         "today_msg": (
             "🌍 Город: <b>{city}</b>\n🌡 Температура: <b>{temp}℃</b>"
-            "  {weather}\n🥶 Ощущается: {feels_like}℃\n💧 Влажность:"
+            " {weather}\n🥶 Ощущается: {feels_like}℃\n💧 Влажность:"
             " {humidity}%\n📊 Давление: {pressure} мм\n💨 Ветер: {wind}"
-            " м/с\n🌅 Восход: {sunrise} | Закат: {sunset}\n\n💡 <b>Совет:</b>"
-            " {advice}\n\nОтличного дня! 😉"
+            " м/с\n🌅 Восход: {sunrise} | Закат: {sunset}\n\n{radar}\n\n💡"
+            " <b>Совет:</b> {advice}\n\n{cyber}\nОтличного дня! 😉"
         ),
-        "fortune_msg": "🔮 <b>Метео-пророчество для города {city}:</b>\n\n💬 <i>\"{fortune}\"</i>\n\nПусть этот день удивит тебя! ✨",
-        "fortunes": [
-            "Звезды шепчут: в такую погоду идеальное преступление — это остаться дома под пледом.",
-            "Если на улице туман, значит, Вселенная скрывает от тебя лишние заботы. Расслабься!",
-            "Солнце светит ярко — отличный знак, чтобы купить себе вкусняшку.",
-            "Не бойся холода снаружи, главное — чтобы в душе было тепло.",
-            "Внезапный порыв ветра унесет все твои проблемы. Лови момент!",
-        ],
+        "shaurma_msg": (
+            "🌯 <b>Город: {city} | Шаурма & Кофе Индекс</b>\n\n🔥 Шанс срочно"
+            " отправиться за сочной шаурмой или горячим рафом составляет:"
+            " <b>{chance}%</b>!\n💬 <i>\"{text}\"</i>"
+        ),
+        "drip_msg": (
+            "🧥 <b>Drip-Check (Оценка стиля и тепла):</b>\n\n⭐ Стиль/Защита:"
+            " <b>{score}</b> / 10\n💬 <i>\"{comment}\"</i>"
+        ),
+        "lazy_msg": (
+            "🛋️ <b>Индекс Абсолютной Лени:</b>\n\n💤 Вероятность забить на все"
+            " дела и проиграть в игры весь день: <b>{lazy}%</b>!\n💬"
+            " <i>\"{phrase}\"</i>"
+        ),
+        "fortune_msg": "🔮 <b>Метео-пророчество ({city}):</b>\n\n💬 <i>\"{fortune}\"</i>",
         "tomorrow_header": "🌍 Прогноз на завтра для <b>{city}</b>:\n\n",
         "week_header": "🌍 Прогноз на неделю для <b>{city}</b>:\n\n",
         "week_footer": "\nОтличного дня! 😉",
         "morning_msg": (
-            "🌅 <b>Доброе утро! Сводка для города {city}:</b>\n🌡 Температура:"
-            " {temp}℃  {weather}\n💡 {advice}\n\nХорошего дня!"
+            "🌅 <b>Доброе утро! {city}:</b>\n🌡 Температура: {temp}℃"
+            " {weather}\n💡 {advice}\n\nПусть день пройдет мощно!"
         ),
-        "alert_header": (
-            "🚨 <b>Резкое изменение погоды ({city})!</b>\n🌡 Сейчас: {temp}℃\n"
-        ),
-        "alert_rain": "☔ <b>Начался дождь! Берите зонты!</b>\n",
-        "alert_cold": (
-            "🥶 <b>Похолодало на {diff}℃! Одевайтесь теплее.</b>"
-        ),
-        "adv_cold": (
-            "🧥 Надевай пуховик, шапку и шарф — на улице дубак!"
-        ),
-        "adv_chilly": (
-            "🧥 Нужна тёплая куртка или пальто, в одной кофте точно замёрзнешь."
-        ),
-        "adv_cool": (
-            "🧥 Накинь ветровку или плотную толстовку/свитер, футболки уже мало."
-        ),
-        "adv_mild": (
-            "👕 Подойдёт лёгкая кофта или рубашка, но к вечеру может"
-            " похолодать."
-        ),
-        "adv_warm": "👕 Достаточно футболки, на улице тепло.",
-        "adv_rain": "☔ Обязательно бери зонт!",
-        "adv_snow": (
-            "🥾 Идет снег, обувайся теплее и аккуратнее на дорогах."
-        ),
-        "adv_sun": "🕶️ Солнечно, захвати солнцезащитные очки.",
+        "alert_header": "🚨 <b>Резкий шторм ({city})!</b>\n🌡 Сейчас: {temp}℃\n",
+        "alert_rain": "☔ <b>Начался ливень! Доставайте зонты!</b>\n",
+        "alert_cold": "🥶 <b>Температура упала на {diff}℃! Утепляемся.</b>",
     },
 }
 
@@ -264,23 +213,47 @@ def get_clothing_advice(temp, weather_desc, lang):
   t = TEXTS[lang]
   advice = []
   if temp < 5:
-    advice.append(t["adv_cold"])
+    advice.append(t["adv_cold"] if "adv_cold" in t else "🧥 Дубак!")
   elif temp < 12:
-    advice.append(t["adv_chilly"])
+    advice.append(
+        t["adv_chilly"] if "adv_chilly" in t else "🧥 Нужна куртка."
+    )
   elif temp < 18:
-    advice.append(t["adv_cool"])
+    advice.append(t["adv_cool"] if "adv_cool" in t else "🧥 Накинь ветровку.")
   elif temp < 24:
-    advice.append(t["adv_mild"])
+    advice.append(t["adv_mild"] if "adv_mild" in t else "👕 Легкая кофта.")
   else:
-    advice.append(t["adv_warm"])
+    advice.append(t["adv_warm"] if "adv_warm" in t else "👕 Футболка топ.")
 
   if any(w in weather_desc for w in ["Rain", "Drizzle", "Thunderstorm"]):
-    advice.append(t["adv_rain"])
+    advice.append("☔ Зонт обязателен!")
   elif "Snow" in weather_desc:
-    advice.append(t["adv_snow"])
+    advice.append("🥾 Снег, обувайся теплее.")
   elif "Clear" in weather_desc and temp >= 24:
-    advice.append(t["adv_sun"])
+    advice.append("🕶️ Солнечно, очки не помешают.")
   return " ".join(advice)
+
+
+def get_radar_art(desc):
+  if "Rain" in desc or "Drizzle" in desc:
+    return "🌧️ [~ ~ ~ АНИМАЦИЯ ДОЖДЯ ~ ~ ~]"
+  elif "Snow" in desc:
+    return "❄️ [* . * . * СНЕГОПАД . * . *]"
+  elif "Clear" in desc:
+    return "☀️ [ \\ | / СОЛНЕЧНЫЙ РАДАР \\ | / ]"
+  else:
+    return "☁️ [ = = ОБЛАЧНЫЙ РАДАР = = ]"
+
+
+def get_cyber_vibe(temp, desc):
+  if temp < 0:
+    return "❄️ *Режим выживания в пустошах активирован. Мороз кусает за щеки.*"
+  elif "Rain" in desc:
+    return "⚡ *Киберпанк-вайб: неоновые лужи отражают твое превосходство.*"
+  elif temp > 25:
+    return "🔥 *Пустынный зной: гидратация превыше всего, путник.*"
+  else:
+    return "🌐 *Системы в норме. Идеальный баланс стихий.*"
 
 
 def send_language_menu(chat_id):
@@ -297,7 +270,7 @@ def send_language_menu(chat_id):
 def start_command(message):
   active_chats.add(message.chat.id)
   lang = get_lang(message.chat.id)
-  bot.send_message(message.chat.id, TEXTS[lang]["welcome"])
+  bot.send_message(message.chat.id, TEXTS[lang]["welcome"], parse_mode="HTML")
   send_language_menu(message.chat.id)
 
 
@@ -334,7 +307,6 @@ def ask_weather_type(message):
     return
   user_cities[chat_id] = city
 
-  # Логирование действия пользователя в консоль (Пункт 3)
   print(
       f"[{datetime.now(timezone(timedelta(hours=5)))}] Пользователь {chat_id}"
       f" запросил город: {city}"
@@ -353,7 +325,24 @@ def ask_weather_type(message):
   btn_fortune = types.InlineKeyboardButton(
       t["btn_fortune"], callback_data=f"fortune:{city}"
   )
-  keyboard.add(btn_today, btn_tomorrow, btn_week, btn_fortune)
+  btn_shaurma = types.InlineKeyboardButton(
+      t["btn_shaurma"], callback_data=f"shaurma:{city}"
+  )
+  btn_drip = types.InlineKeyboardButton(
+      t["btn_drip"], callback_data=f"drip:{city}"
+  )
+  btn_lazy = types.InlineKeyboardButton(
+      t["btn_lazy"], callback_data=f"lazy:{city}"
+  )
+  keyboard.add(
+      btn_today,
+      btn_tomorrow,
+      btn_week,
+      btn_fortune,
+      btn_shaurma,
+      btn_drip,
+      btn_lazy,
+  )
 
   bot.send_message(
       chat_id,
@@ -378,7 +367,24 @@ def make_menu_keyboard(lang, city):
   btn_fortune = types.InlineKeyboardButton(
       t["btn_fortune"], callback_data=f"fortune:{city}"
   )
-  keyboard.add(btn_today, btn_tomorrow, btn_week, btn_fortune)
+  btn_shaurma = types.InlineKeyboardButton(
+      t["btn_shaurma"], callback_data=f"shaurma:{city}"
+  )
+  btn_drip = types.InlineKeyboardButton(
+      t["btn_drip"], callback_data=f"drip:{city}"
+  )
+  btn_lazy = types.InlineKeyboardButton(
+      t["btn_lazy"], callback_data=f"lazy:{city}"
+  )
+  keyboard.add(
+      btn_today,
+      btn_tomorrow,
+      btn_week,
+      btn_fortune,
+      btn_shaurma,
+      btn_drip,
+      btn_lazy,
+  )
   return keyboard
 
 
@@ -415,12 +421,12 @@ def callback_inline(call):
       )
       return
 
-    # УМНЫЙ КЭШ (Пункт 2: защита от спама кликами и экономия API-лимитов)
+    # УМНЫЙ КЭШ НА 3 МИНУТЫ
     cache_key = f"{city}:{action}"
     current_time = time.time()
     if cache_key in weather_cache:
       cached_data, cached_time = weather_cache[cache_key]
-      if current_time - cached_time < 180:  # Кэш живет 3 минуты
+      if current_time - cached_time < 180:
         data = cached_data
       else:
         data = None
@@ -456,7 +462,6 @@ def callback_inline(call):
       pressure = round(data["main"]["pressure"] * 0.75006)
       wind = data["wind"]["speed"]
 
-      # Пункт 2 и 3: Точное время восхода и заката с учетом таймзоны города через API
       city_tz = data.get("timezone", 0)
       sunrise_ts = data["sys"]["sunrise"] + city_tz
       sunset_ts = data["sys"]["sunset"] + city_tz
@@ -466,6 +471,9 @@ def callback_inline(call):
       sunset = datetime.fromtimestamp(sunset_ts, timezone.utc).strftime("%H:%M")
 
       advice = get_clothing_advice(cur_weather, weather_desc, lang)
+      radar = get_radar_art(weather_desc)
+      cyber = get_cyber_vibe(cur_weather, weather_desc)
+
       answer = t["today_msg"].format(
           city=city_name,
           temp=cur_weather,
@@ -476,7 +484,9 @@ def callback_inline(call):
           wind=wind,
           sunrise=sunrise,
           sunset=sunset,
+          radar=radar,
           advice=advice,
+          cyber=cyber,
       )
 
       keyboard = types.InlineKeyboardMarkup()
@@ -485,6 +495,80 @@ def callback_inline(call):
       )
       keyboard.add(btn_back)
 
+      bot.answer_callback_query(call.id)
+      bot.edit_message_text(
+          answer,
+          chat_id=chat_id,
+          message_id=call.message.message_id,
+          parse_mode="HTML",
+          reply_markup=keyboard,
+      )
+
+    elif action == "shaurma":
+      city_name = escape(data.get("name", city))
+      temp = data["main"]["temp"]
+      chance = min(99, max(15, int(80 - temp * 2 if temp > 0 else 95)))
+      phrases = [
+          "Идеальный погодный тайминг для калорийного взрыва.",
+          "Шаурмичная манит сильнее, чем любые дедлайны.",
+          "Кофе в руке, шаурма в пакете — залог победы над климатом.",
+      ]
+      answer = t["shaurma_msg"].format(
+          city=city_name, chance=chance, text=random.choice(phrases)
+      )
+      keyboard = types.InlineKeyboardMarkup()
+      btn_back = types.InlineKeyboardButton(
+          t["btn_back"], callback_data=f"back:{city}"
+      )
+      keyboard.add(btn_back)
+      bot.answer_callback_query(call.id)
+      bot.edit_message_text(
+          answer,
+          chat_id=chat_id,
+          message_id=call.message.message_id,
+          parse_mode="HTML",
+          reply_markup=keyboard,
+      )
+
+    elif action == "drip":
+      temp = data["main"]["temp"]
+      score = max(1, min(10, int(10 - abs(temp - 20) / 4)))
+      comments = [
+          "Максимальный стиль, но можно отморозить всё на свете.",
+          "Баланс между комфортом и уличным луком найден.",
+          "Одевайся как капуста, иначе выживание под вопросом.",
+      ]
+      answer = t["drip_msg"].format(score=score, comment=random.choice(comments))
+      keyboard = types.InlineKeyboardMarkup()
+      btn_back = types.InlineKeyboardButton(
+          t["btn_back"], callback_data=f"back:{city}"
+      )
+      keyboard.add(btn_back)
+      bot.answer_callback_query(call.id)
+      bot.edit_message_text(
+          answer,
+          chat_id=chat_id,
+          message_id=call.message.message_id,
+          parse_mode="HTML",
+          reply_markup=keyboard,
+      )
+
+    elif action == "lazy":
+      temp = data["main"]["temp"]
+      lazy_val = 99 if temp < 5 or temp > 30 else 65
+      phrases = [
+          "Вселенная официально разрешает лежать под пледом.",
+          "Работа подождет, пока погода шепчет спать.",
+          "Энергия на нуле, включай фоновый режим лени.",
+      ]
+      answer = t["lazy_msg"].format(
+          lazy=lazy_val, phrase=random.choice(phrases)
+      )
+      keyboard = types.InlineKeyboardMarkup()
+      btn_back = types.InlineKeyboardButton(
+          t["btn_back"], callback_data=f"back:{city}"
+      )
+      keyboard.add(btn_back)
       bot.answer_callback_query(call.id)
       bot.edit_message_text(
           answer,
@@ -519,13 +603,11 @@ def callback_inline(call):
           forecast_lines.append(f"📅 <b>{dt_txt}</b>: <b>{temp}℃</b> {wd}")
 
       answer = "\n".join(forecast_lines) + t["week_footer"]
-
       keyboard = types.InlineKeyboardMarkup()
       btn_back = types.InlineKeyboardButton(
           t["btn_back"], callback_data=f"back:{city}"
       )
       keyboard.add(btn_back)
-
       bot.answer_callback_query(call.id)
       bot.edit_message_text(
           answer,
@@ -546,13 +628,11 @@ def callback_inline(call):
           wd = WEATHER_NAMES[lang].get(weather_desc, "🤔")
           forecast_lines.append(f"📅 <b>{date}</b>: <b>{temp}℃</b> {wd}")
       answer = "\n".join(forecast_lines) + t["week_footer"]
-
       keyboard = types.InlineKeyboardMarkup()
       btn_back = types.InlineKeyboardButton(
           t["btn_back"], callback_data=f"back:{city}"
       )
       keyboard.add(btn_back)
-
       bot.answer_callback_query(call.id)
       bot.edit_message_text(
           answer,
@@ -563,19 +643,21 @@ def callback_inline(call):
       )
 
     elif action == "fortune":
-      # Уникальная фича: Метео-предсказание судьбы
       city_name = escape(data.get("name", city))
-      random_fortune = random.choice(t["fortunes"])
+      fortunes_list = [
+          "Звезды шепчут: в такую погоду идеальное преступление — остаться дома.",
+          "Туман скрывает лишние заботы. Расслабься и кайфуй.",
+          "Солнце светит ярко — отличный знак, чтобы порадовать себя вкусняшкой.",
+          "Внезапный порыв ветра унесет все проблемы.",
+      ]
       answer = t["fortune_msg"].format(
-          city=city_name, fortune=random_fortune
+          city=city_name, fortune=random.choice(fortunes_list)
       )
-
       keyboard = types.InlineKeyboardMarkup()
       btn_back = types.InlineKeyboardButton(
           t["btn_back"], callback_data=f"back:{city}"
       )
       keyboard.add(btn_back)
-
       bot.answer_callback_query(call.id)
       bot.edit_message_text(
           answer,
@@ -626,10 +708,7 @@ def morning_scheduler():
               bot.send_message(chat_id, morning_text, parse_mode="HTML")
             except Exception:
               pass
-          print(
-              f"[{now}]: Утренняя рассылка успешно отправлена всем"
-              " пользователям!"
-          )
+          print(f"[{now}]: Утренняя рассылка улетела всем пользователям!")
         time.sleep(40)
     except Exception as e:
       print(f"Ошибка в утреннем планировщике: {e}")
@@ -695,5 +774,5 @@ if __name__ == "__main__":
           skip_pending=True, timeout=60, long_polling_timeout=60
       )
     except Exception as e:
-      print(f"Ошибка polling: {e}, повторный запуск через 5 секунд...")
+      print(f"Ошибка polling: {e}, перезапуск через 5 секунд...")
       time.sleep(5)
