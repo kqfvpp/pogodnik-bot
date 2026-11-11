@@ -90,6 +90,7 @@ TEXTS = {
         ),
         "btn_today": "☀️ Bugungi ob-havo",
         "btn_week": "📅 Haftalik ob-havo",
+        "btn_back": "🔙 Orqaga",
         "city_too_long": (
             "❌ Shahar nomi juda uzun. Qisqaroq yozib ko'ring."
         ),
@@ -155,6 +156,7 @@ TEXTS = {
         ),
         "btn_today": "☀️ На сегодня",
         "btn_week": "📅 На неделю",
+        "btn_back": "🔙 Назад",
         "city_too_long": (
             "❌ Слишком длинное название города. Попробуй короче."
         ),
@@ -312,6 +314,25 @@ def callback_inline(call):
     t = TEXTS[lang]
     city = value
 
+    if action == "back":
+      keyboard = types.InlineKeyboardMarkup()
+      btn_today = types.InlineKeyboardButton(
+          t["btn_today"], callback_data=f"today:{city}"
+      )
+      btn_week = types.InlineKeyboardButton(
+          t["btn_week"], callback_data=f"week:{city}"
+      )
+      keyboard.add(btn_today, btn_week)
+      bot.answer_callback_query(call.id)
+      bot.edit_message_text(
+          t["choose_type"].format(city=escape(city)),
+          chat_id=chat_id,
+          message_id=call.message.message_id,
+          parse_mode="HTML",
+          reply_markup=keyboard,
+      )
+      return
+
     if action == "today":
       r = requests.get(
           f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={open_weather_api_key}&units=metric",
@@ -339,12 +360,19 @@ def callback_inline(call):
           wind=wind,
           advice=advice,
       )
+      keyboard = types.InlineKeyboardMarkup()
+      btn_back = types.InlineKeyboardButton(
+          t["btn_back"], callback_data=f"back:{city}"
+      )
+      keyboard.add(btn_back)
+
       bot.answer_callback_query(call.id)
       bot.edit_message_text(
           answer,
           chat_id=chat_id,
           message_id=call.message.message_id,
           parse_mode="HTML",
+          reply_markup=keyboard,
       )
     elif action == "week":
       r = requests.get(
@@ -364,12 +392,20 @@ def callback_inline(call):
           wd = WEATHER_NAMES[lang].get(weather_desc, "🤔")
           forecast_lines.append(f"📅 <b>{date}</b>: <b>{temp}℃</b> {wd}")
       answer = "\n".join(forecast_lines) + t["week_footer"]
+      
+      keyboard = types.InlineKeyboardMarkup()
+      btn_back = types.InlineKeyboardButton(
+          t["btn_back"], callback_data=f"back:{city}"
+      )
+      keyboard.add(btn_back)
+
       bot.answer_callback_query(call.id)
       bot.edit_message_text(
           answer,
           chat_id=chat_id,
           message_id=call.message.message_id,
           parse_mode="HTML",
+          reply_markup=keyboard,
       )
   except Exception:
     lang = get_lang(chat_id)
@@ -384,7 +420,6 @@ def callback_inline(call):
 def morning_scheduler():
   while True:
     try:
-      # Установлено время Узбекистана (UTC+5)
       now = datetime.now(timezone(timedelta(hours=5)))
       if now.hour == 8 and now.minute == 0:
         for chat_id in list(active_chats):
